@@ -1,31 +1,35 @@
 import { Router, Request, Response } from 'express'
 import { createHash } from "crypto";
 import User from "../models/User";
-import jwt from 'jsonwebtoken';
+import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 
 const router: Router = Router()
 
 
 function checkAuthorization(req : Request, res : Response, next: () => void) {
-    const authHeader = req.headers['authorization'];
+    const { token } = req.cookies
 
-    if (!authHeader) {
-        return res.status(401).json({ message: 'Authorization header missing' });
+    if (!token) {
+        return res.status(401).json({ message: 'Authorization Token Cookie missing' });
     }
 
-    const [scheme, token] = authHeader.split(' ');
+    console.log("meow")
 
-    if (scheme !== 'Bearer' || !token) {
-        return res.status(401).json({ message: 'Invalid authorization header format' });
+    try{
+        jwt.verify(token, process.env.JWT_SECRET_KEY!)
+        next()
     }
-
-    const verified = jwt.verify(token, process.env.JWT_SECRET_KEY!)
-    if (verified) next()
-    else return res.status(403).json({ message: 'Invalid token' });
+    catch(e){
+        res.cookie("token","",{
+            expires : new Date(Date.now() - 1) //sets the cookie to expiry
+        })
+        if (e instanceof TokenExpiredError) return res.status(401).send({ message: 'Token Expired, Login in Again' });
+        else return res.status(403).send({ message: 'Invalid token' });
+    }
     
 }
 
-router.get('/',async (req : Request, res : Response) => {
+router.get('/',checkAuthorization,async (req : Request, res : Response) => {
     res.status(200).send("User API");
 })
 
@@ -35,19 +39,24 @@ router.get('/:userId',async (req : Request, res : Response) => {
     else res.status(404).send(`No user ${req.params.userId}`)
 })
 
-router.post('/:userId/login', async (req : Request, res : Response) => {
-    const result = await User.findById(req.params.userId).lean()
+router.post('/login', async (req : Request, res : Response) => {
+    const {Username, Password} = req.body
+    const result = await User.findOne({User : Username}).lean()
     if (!result) res.status(404).send(`No user ${req.params.userId}`)
         
     const resultPasswordHidden = {...result,Password:""}
-
-    const {pwd} = req.body;
-    const hash  = createHash('sha256').update(pwd).digest('hex')
+    const hash  = createHash('sha256').update(Password).digest('hex')
 
     if (result!.Password === hash){
         const jwtSecretKey = process.env.JWT_SECRET_KEY!;
         const token = jwt.sign(resultPasswordHidden,jwtSecretKey)
-        res.status(200).send({token})
+        res.cookie("token",token,{
+            expires : new Date(Date.now() + 3600*1000),
+            path : "/",
+            httpOnly : true,
+            sameSite : "lax"
+        })
+        res.send("Login Successful")
     }
     else res.status(401).send(`Wrong Credentials`)
 })

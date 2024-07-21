@@ -1,5 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser'
 import cors from 'cors';
 import mongoose from 'mongoose';
 
@@ -19,7 +20,11 @@ mongoose.connection.on("connected",() => {console.log("MongoDB Connected")})
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors())
+app.use(cookieParser())
+app.use(cors({
+  origin: process.env.FRONT_END_URL!,
+  credentials: true // Allow cookies to be sent
+}))
 
 // Routes
 app.use('/api/user', userRoutes);
