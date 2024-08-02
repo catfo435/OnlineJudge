@@ -13,8 +13,6 @@ function checkAuthorization(req : Request, res : Response, next: () => void) {
         return res.status(401).json({ message: 'Authorization Token Cookie missing' });
     }
 
-    console.log("meow")
-
     try{
         jwt.verify(token, process.env.JWT_SECRET_KEY!)
         next()
@@ -42,12 +40,14 @@ router.get('/:userId',async (req : Request, res : Response) => {
 router.post('/login', async (req : Request, res : Response) => {
     const {Username, Password} = req.body
     const result = await User.findOne({User : Username}).lean()
-    if (!result) res.status(404).send(`No user ${req.params.userId}`)
+    if (!result) {
+        res.status(404).send(`No user ${req.params.userId}`)
+        return
+    }
         
     const resultPasswordHidden = {...result,Password:""}
-    const hash  = createHash('sha256').update(Password).digest('hex')
 
-    if (result!.Password === hash){
+    if (result!.Password === Password){
         const jwtSecretKey = process.env.JWT_SECRET_KEY!;
         const token = jwt.sign(resultPasswordHidden,jwtSecretKey)
         res.cookie("token",token,{
