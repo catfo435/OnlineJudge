@@ -7,8 +7,9 @@ import mongoose from 'mongoose';
 import userRoutes from './routes/user';
 import adminRoutes from './routes/admin';
 import problemRoutes from './routes/problems';
+import dotenv from 'dotenv';
 
-require("dotenv").config()
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT;

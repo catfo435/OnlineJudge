@@ -1,6 +1,6 @@
-import SignInUpPane from "./components/SignInUpPane";
+import SignInUpPane from "../components/SignInUpPane";
 
-const App = () => {
+const LoginPage = () => {
 
   return (
     <div className="loginPage flex w-screen h-screen">
@@ -18,4 +18,4 @@ const App = () => {
   );
 }
 
-export default App;
+export default LoginPage;
